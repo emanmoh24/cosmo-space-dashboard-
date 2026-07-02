@@ -183,21 +183,17 @@ function displayApodData() {
 
 // }
 
-function searchDate() {
-  // 1. Keep the input box separate so it doesn't loop and duplicate
-  let box = `<input type="date" id="apod-date-input" class="custom-date-input" value="2024-03-14" min="1995-06-16" />`;
+// function searchDate() {
+//   let box = `<input type="date" id="apod-date-input" class="custom-date-input" value="2024-03-14" min="1995-06-16" />`;
 
-  // 2. Loop through your apod object to append only the text spans
-  for (date in apod) {
-    box += `<span class="text-sm block">
-              ${apod[date]}
-            </span>`;
-  }
+//   for (date in apod) {
+//     box += `<span class="text-sm block">
+//               ${apod[date]}
+//             </span>`;
+//   }
 
-  // 3. CRITICAL: Inject the completed string into your HTML container
-  // Replace 'container-id' with the actual ID of the div wrapping your search box
-  apodInput.innerHTML = box; 
-}
+//   apodInput.innerHTML = box; 
+// }
 
 async function getImage() {
 
