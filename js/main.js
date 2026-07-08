@@ -22,6 +22,8 @@ const fullResBtn = document.querySelector("#apod-image-container button");
 const imgContainer = document.querySelector("#apod-image-container");
 const loadBtn = document.querySelector("#load-date-btn");
 const todayBtn = document.querySelector("#today-apod-btn");
+const toggleBtn = document.querySelector("#sidebar-toggle"); 
+const sidebar = document.querySelector("#sidebar");
 const btns = [planetsBtn, launchesBtn, inSpaceBtn];
 
 let apod;
@@ -62,6 +64,11 @@ launchesBtn.addEventListener("click", e => {
 planetsBtn.addEventListener("click", e => {
   showSection(planetSection)
 });
+
+toggleBtn.addEventListener("click", e => {
+  // sidebar.classList.add("sidebar-mobile.sidebar-open")
+  sidebar.classList.toggle("sidebar-mobile")
+})
 
 apodInput.addEventListener("input", e => {
   const chosenDate = apodInput.value;
