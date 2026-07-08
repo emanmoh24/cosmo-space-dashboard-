@@ -6,63 +6,36 @@ const launchSection = document.querySelector("#launches");
 const planetSection = document.querySelector("#planets");
 const sections = document.querySelectorAll("div section");
 const planets = document.querySelectorAll('[data-planet-id]');
-const img = document.querySelector("#planet-detail-image");
 const apodTitle = document.querySelector("#apod-title");
 const apodExplanation = document.querySelector("#apod-explanation");
 const apodDateInfo = document.querySelector("#apod-date-info");
-const apodDateDetail = document.querySelector("#apod-date-detail")
-const apodDate = document.querySelectorAll("#apod-date");
-const apodInput = document.querySelector("label[for='apod-date-input']")
+const apodDateDetail = document.querySelector("#apod-date-detail");
+const apodCopyright = document.querySelector("#apod-copyright");
+const apodDate = document.querySelector("#apod-date");
+const apodInput = document.querySelector("#apod-date-input")
+const apodImg = document.querySelector("#apod-image");
+const apodLoading = document.querySelector("#apod-loading");
 const apodUrl = "https://api.nasa.gov/planetary/apod?api_key=GGHMzg3aCDXxLBARyzJ3kzdT4Rk27O7abTWItDB0";
 const planetsUrl = "https://solar-system-opendata-proxy.vercel.app/api/planets";
-const launchesUrl = "https://lldev.thespacedevs.com/2.3.0/launches/upcoming/?"
-const copyRight = document.querySelector("#apod-copyright");
-const apodImg = document.querySelector("#apod-image");
+const launchesUrl = "https://lldev.thespacedevs.com/2.3.0/launches/upcoming/?";
 const fullResBtn = document.querySelector("#apod-image-container button");
 const imgContainer = document.querySelector("#apod-image-container");
 const loadBtn = document.querySelector("#load-date-btn");
-const featuredLaunch = document.querySelector("#featured-launch")
-const cardGrid = document.querySelector("#launches-grid");
-
-const planetImg = document.querySelector("#planet-detail-image");
-const planetName = document.querySelector("#planet-detail-name");
-const planetDesc = document.querySelector("#planet-detail-description");
-const planetDistance = document.querySelector("#planet-distance");
-const planetRadius = document.querySelector("#planet-radius");
-const planetMass = document.querySelector("#planet-mass");
-const planetDensity = document.querySelector("#planet-density");
-const planetOrbitalPeriod = document.querySelector("#planet-orbital-period");
-const planetRotation = document.querySelector("#planet-rotation");
-const planetMoons = document.querySelector("#planet-moons");
-const planetGravity = document.querySelector("#planet-gravity");
-const planetDiscoverer = document.querySelector("#planet-discoverer");
-const planetDiscoveryDate = document.querySelector("#planet-discovery-date");
-const planetBodyType = document.querySelector("#planet-body-type");
-const planetVol = document.querySelector("#planet-volume");
-const planetPerihelion = document.querySelector("#planet-perihelion");
-const planetAphelion = document.querySelector("#planet-aphelion");
-const planetInclination = document.querySelector("#planet-inclination");
-const planetEccentricity = document.querySelector("#planet-eccentricity");
-const planetAxialTilt = document.querySelector("#planet-axial-tilt");
-const planetTemp = document.querySelector("#planet-temp");
-const planetEscape = document.querySelector("#planet-escape");
-const planetFacts = document.querySelector("#planet-facts");
-const planetTable = document.querySelector("#planet-comparison-tbody");
+const todayBtn = document.querySelector("#today-apod-btn");
 const btns = [planetsBtn, launchesBtn, inSpaceBtn];
 
-let apod = {};
+let apod;
 let imgUrl;
 let launchesData = [];
 let planetsList = [];
 let planetId;
+let normalizedDate
+let newApod;
 
-
-
-window.addEventListener("load", async () => {
-  await getApodData()
-  await getImage()
-  await getLaunchesData()
-  await getPlanet()
+window.addEventListener("load", () => {
+  getApodData()
+  getLaunchesData()
+  getPlanet()
 })
 
 btns.forEach(btn => {
@@ -79,29 +52,34 @@ btns.forEach(btn => {
 })
 
 inSpaceBtn.addEventListener("click", e => {
-
   showSection(inSpaceSection)
-
 })
 
 launchesBtn.addEventListener("click", e => {
-
   showSection(launchSection);
-
 })
 
 planetsBtn.addEventListener("click", e => {
   showSection(planetSection)
 });
 
-fullResBtn.addEventListener("click", e => {
-
-  window.open(`${imgUrl}`, '_blank');
-
-})
+apodInput.addEventListener("input", e => {
+  const chosenDate = apodInput.value;
+  apodInput.nextElementSibling.innerHTML = chosenDate;
+  searchByDate(chosenDate)
+});
 
 loadBtn.addEventListener("click", e => {
-  location.reload()
+  displayApodData(newApod)
+})
+
+todayBtn.addEventListener("click", e => {
+  apodInput.nextElementSibling.innerHTML = apod.date.split("T")[0];
+  displayApodData(apod)
+})
+
+fullResBtn.addEventListener("click", e => {
+  window.open(`${imgUrl}`, '_blank');
 })
 
 planets.forEach(planet => {
@@ -113,7 +91,6 @@ planets.forEach(planet => {
   })
 })
 
-
 function showSection(activeSection) {
   sections.forEach(section => {
 
@@ -123,108 +100,95 @@ function showSection(activeSection) {
 }
 
 async function getApodData() {
-
-  const loading = "loading..."
-
-  apodTitle.innerHTML = loading
-  apodExplanation.innerHTML = "Loading description..."
-  apodDateInfo.innerHTML = loading
-  apodDateDetail.innerHTML = loading
-  apodDate.innerHTML = loading
+  const loading = "loading...";
+  apodTitle.innerHTML = loading;
+  apodExplanation.innerHTML = "Loading description...";
+  apodDateInfo.innerHTML = loading;
+  apodDateDetail.innerHTML = loading;
+  apodDate.innerHTML = loading;
+  apodLoading.classList.remove("hidden");
 
   try {
     const response = await fetch(apodUrl);
     const data = await response.json();
-    apod = data
-    displayApodData()
-    searchDate()
+    apod = data;
+
+    apodLoading.classList.add("hidden");
+    imgUrl = data.url;
+
+    displayApodData(data);
+    normalizeDate();
   }
   catch (error) {
-
-    const loadingError = "error loading"
-
+    const loadingError = "error loading";
     apodTitle.innerHTML = `${loadingError} title`;
     apodExplanation.innerHTML = `${loadingError} description`;
     apodDateInfo.innerHTML = `${loadingError} date`;
     apodDateDetail.innerHTML = `${loadingError} date`;
     apodDate.innerHTML = `${loadingError} date`;
-
+    apodLoading.classList.add("hidden");
+    createErrorScreen();
   }
 }
 
-function displayApodData() {
+function displayApodData(obj) {
+  const existingError = imgContainer.querySelector(".fa-triangle-exclamation")?.parentElement;
+  if (existingError) {
+    existingError.remove();
+  }
 
-  apodTitle.innerHTML = apod.title;
-  apodExplanation.innerHTML = apod.explanation;
-  apodDateInfo.innerHTML = dateFormatter(apod.date);
-  apodDateDetail.innerHTML = dateFormatter(apod.date);
-  apodDate.innerHTML = dateFormatter(apod.date);
-  copyRight.innerHTML = `&copy; ${apod.copyright}`;
+  apodTitle.innerHTML = obj.title;
+  apodExplanation.innerHTML = obj.explanation;
+  apodDateInfo.innerHTML = dateFormatter(obj.date);
+  apodDateDetail.innerHTML = dateFormatter(obj.date);
+  apodDate.innerHTML = `Astronomy Picture of the Day - ${dateFormatter(obj.date)}`;
+  apodCopyright.innerHTML = `&copy; ${obj.copyright || "unknown"}`;
+
+  const existingIframe = imgContainer.querySelector("iframe");
+  if (existingIframe) {
+    existingIframe.remove();
+  }
+
+  if (obj.media_type === "video") {
+    apodImg.classList.add("hidden");
+
+    const videoPlayer = document.createElement("iframe");
+    videoPlayer.src = obj.url;
+    videoPlayer.className = "w-full h-full";
+    videoPlayer.setAttribute("frameborder", "0");
+    videoPlayer.setAttribute("allowfullscreen", "");
+
+    imgContainer.appendChild(videoPlayer);
+  } else {
+    apodImg.classList.remove("hidden");
+    apodImg.setAttribute("src", obj.url);
+  }
+
+  apodInput.value = obj.date.split("T")[0];
 }
 
-// function searchDate() {
+function normalizeDate() {
+  const normalizedDate = apod.date.split("T")[0];
+  apodInput.max = new Date().toISOString().split("T")[0];
+  apodInput.min = "1995-06-16"
+  apodInput.value = normalizedDate;
+  apodInput.nextElementSibling.innerHTML = normalizedDate;
+}
 
-//   let box = "";
-
-
-//   for (date in apod) {
-
-//     box += `<input type="date" id="apod-date-input" class="custom-date-input" value="2024-03-14" max=""
-//                   min="1995-06-16" />
-//                 <span class="text-sm">
-//                   ${dateFormatter(apod[date])}
-//                 </span>`
-
-
-//   }
-
-//   apodInput.innerHTML = box 
-
-
-// }
-
-// function searchDate() {
-//   let box = `<input type="date" id="apod-date-input" class="custom-date-input" value="2024-03-14" min="1995-06-16" />`;
-
-//   for (date in apod) {
-//     box += `<span class="text-sm block">
-//               ${apod[date]}
-//             </span>`;
-//   }
-
-//   apodInput.innerHTML = box; 
-// }
-
-async function getImage() {
-
-  const apodLoading = document.querySelector("#apod-loading")
-
-  apodLoading.classList.remove("hidden")
-
+async function searchByDate(date) {
   try {
-
-    const response = await fetch(`${apodUrl}`);
+    const response = await fetch(`${apodUrl}&date=${encodeURIComponent(date)}`);
     const data = await response.json();
-
-    apodLoading.classList.add("hidden")
-    apodImg.classList.remove("hidden")
-    apodImg.setAttribute("src", data.url)
-    imgUrl = data.url
-
-  } catch (error) {
-
-    apodLoading.classList.add("hidden")
-    createErrorScreen()
-
-  }
+    newApod = data
+  } catch (error) { }
 }
 
 function createErrorScreen() {
   const errorScreen = document.createElement("div");
-  const alert = document.createElement("span");
   const errorTitle = document.createElement("h3");
-  const titleNode = document.createTextNode("Failed to load today's image");
   const errorDesc = document.createElement("span");
+  const alert = document.createElement("span");
+  const titleNode = document.createTextNode("Failed to load today's image");
   const descNode = document.createTextNode("Please try again later");
 
   errorDesc.style.cssText = `color:#596980`
@@ -240,7 +204,6 @@ function createErrorScreen() {
   errorDesc.appendChild(descNode);
   errorScreen.appendChild(errorDesc);
   imgContainer.appendChild(errorScreen);
-
 }
 
 async function getLaunchesData() {
@@ -259,9 +222,12 @@ async function getLaunchesData() {
 }
 
 function displayLaunches() {
+  const imgPlaceholder = "./images/launch-placeholder.png";
+  const featuredLaunch = document.querySelector("#featured-launch")
+  const cardGrid = document.querySelector("#launches-grid");
+
   let box = "";
   let box2 = "";
-  const imgPlaceholder = "./images/launch-placeholder.png";
 
   launchesData.slice(1).forEach(data => {
     box += ` <div
@@ -477,6 +443,29 @@ async function getPlanet() {
 }
 
 function switchPlanet() {
+  const planetImg = document.querySelector("#planet-detail-image");
+  const planetName = document.querySelector("#planet-detail-name");
+  const planetDesc = document.querySelector("#planet-detail-description");
+  const planetDistance = document.querySelector("#planet-distance");
+  const planetRadius = document.querySelector("#planet-radius");
+  const planetMass = document.querySelector("#planet-mass");
+  const planetDensity = document.querySelector("#planet-density");
+  const planetOrbitalPeriod = document.querySelector("#planet-orbital-period");
+  const planetRotation = document.querySelector("#planet-rotation");
+  const planetMoons = document.querySelector("#planet-moons");
+  const planetGravity = document.querySelector("#planet-gravity");
+  const planetDiscoverer = document.querySelector("#planet-discoverer");
+  const planetDiscoveryDate = document.querySelector("#planet-discovery-date");
+  const planetBodyType = document.querySelector("#planet-body-type");
+  const planetVol = document.querySelector("#planet-volume");
+  const planetPerihelion = document.querySelector("#planet-perihelion");
+  const planetAphelion = document.querySelector("#planet-aphelion");
+  const planetInclination = document.querySelector("#planet-inclination");
+  const planetEccentricity = document.querySelector("#planet-eccentricity");
+  const planetAxialTilt = document.querySelector("#planet-axial-tilt");
+  const planetTemp = document.querySelector("#planet-temp");
+  const planetEscape = document.querySelector("#planet-escape");
+  const planetFacts = document.querySelector("#planet-facts");
 
   let box = "";
 
@@ -536,16 +525,18 @@ function switchPlanet() {
 }
 
 function displayTableData() {
+  const planetTable = document.querySelector("#planet-comparison-tbody");
+
   let box = "";
 
   const planetColor = ['#06b6d4', '#f97316', '#3b82f6', '#ef4444', '#fb923c', '#facc15', '#06b6d4', '#2563eb']
 
   planetsList.forEach((planet, index) => {
 
-    let typeBadgeClass = "bg-orange-500/50 text-orange-200";
-    if (planet.type === "Gas Giant") typeBadgeClass = "bg-purple-500/50 text-purple-200";
-    if (planet.type === "Ice Giant") typeBadgeClass = "bg-cyan-500/50 text-cyan-200";
-    if (planet.englishName === "Earth") typeBadgeClass = "bg-blue-500/50 text-blue-200";
+    let typeBadgeClass = "background-color: #6240A3; color: #C084FC";
+    if (planet.type === "Gas Giant") typeBadgeClass = "background-color: #6240A3; color: #C084FC";
+    if (planet.type === "Ice Giant") typeBadgeClass = "background-color: #2C56A1 ; color : #60A5FA";
+    if (planet.type === "Terrestrial") typeBadgeClass = "background-color: #8B4F32; color: #FB923C ";
 
 
     const currentColor = planetColor[index];
@@ -581,7 +572,7 @@ function displayTableData() {
         </td>
         
         <td class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
-          <span class="px-2 py-1 rounded text-xs ${typeBadgeClass}">${planet.type}</span>
+          <span style="${typeBadgeClass}" class="px-2 py-1 rounded text-xs">${planet.type}</span>
         </td>
       </tr>
     `;
