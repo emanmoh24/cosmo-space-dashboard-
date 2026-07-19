@@ -65,10 +65,15 @@ planetsBtn.addEventListener("click", e => {
   showSection(planetSection)
 });
 
-toggleBtn.addEventListener("click", e => {
-  // sidebar.classList.add("sidebar-mobile.sidebar-open")
-  sidebar.classList.toggle("sidebar-mobile")
-})
+toggleBtn.addEventListener("click", (e) => {
+  sidebar.classList.add("show");
+  e.stopPropagation();
+});
+
+document.addEventListener("click", (e) => {
+  if (sidebar.contains(e.target)) return;
+  sidebar.classList.remove("show");
+});
 
 apodInput.addEventListener("input", e => {
   const chosenDate = apodInput.value;
